@@ -1,0 +1,48 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: ClusterServiceVersion
+metadata:
+  annotations:
+    alm-examples: '[]'
+    capabilities: Basic Install
+  name: intern-operator.v0.0.0
+  namespace: placeholder
+spec:
+  apiservicedefinitions: {}
+  customresourcedefinitions:
+    owned:
+    - description: System is the Schema for the systems API
+      displayName: System
+      kind: System
+      name: systems.intern.malayparida2000
+      version: v1alpha1
+  description: Just a replia controller
+  displayName: intern-operator
+  icon:
+  - base64data: ""
+    mediatype: ""
+  install:
+    spec:
+      deployments: null
+    strategy: ""
+  installModes:
+  - supported: false
+    type: OwnNamespace
+  - supported: false
+    type: SingleNamespace
+  - supported: false
+    type: MultiNamespace
+  - supported: true
+    type: AllNamespaces
+  keywords:
+  - author:malay
+  - work:replication
+  links:
+  - name: Intern Operator
+    url: https://intern-operator.domain
+  maintainers:
+  - email: mparida@redhat.com
+    name: Malay
+  maturity: alpha
+  provider:
+    name: Malay Kumar parida
+  version: 0.0.0
