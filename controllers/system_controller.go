@@ -20,7 +20,6 @@ import (
 	"context"
 	"reflect"
 
-	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 
@@ -30,6 +29,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	"k8s.io/apimachinery/pkg/types"
 
@@ -39,7 +39,6 @@ import (
 // SystemReconciler reconciles a System object
 type SystemReconciler struct {
 	client.Client
-	Log    logr.Logger
 	Scheme *runtime.Scheme
 }
 
@@ -51,12 +50,13 @@ type SystemReconciler struct {
 
 func (r *SystemReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 
-	logger := r.Log.WithValues("system", req.NamespacedName)
+	logger := log.FromContext(ctx)
 
 	// Got the instance
 	instance := &internv1alpha1.System{}
 
 	// Checked for error
+	logger.Info("Checkpoint-1")
 	err := r.Client.Get(context.TODO(), req.NamespacedName, instance)
 
 	if err != nil {
@@ -74,6 +74,7 @@ func (r *SystemReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	// Checking for the deployment already exists, if not creating a new one
 
 	found := &appsv1.Deployment{}
+	logger.Info("Checkpoint-2")
 	err = r.Client.Get(ctx, types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, found)
 	if err != nil && errors.IsNotFound(err) {
 		// Define a new deployment
@@ -103,7 +104,7 @@ func (r *SystemReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		// Spec updated - return and requeue
 		return ctrl.Result{Requeue: true}, nil
 	}
-	r.Log.Info("Recocile loop cheked")
+	logger.Info("Recocile loop cheked")
 
 	// Update the Memcached status with the pod ips
 	// List the pods for this deployment
