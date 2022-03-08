@@ -29,7 +29,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	"k8s.io/apimachinery/pkg/types"
 
@@ -50,45 +49,41 @@ type SystemReconciler struct {
 
 func (r *SystemReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 
-	logger := log.FromContext(ctx)
-
 	// Got the instance
 	instance := &internv1alpha1.System{}
 
-	// Checked for error
-	logger.Info("Checkpoint-1")
 	err := r.Client.Get(context.TODO(), req.NamespacedName, instance)
 
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
 			// Return and don't requeue
-			logger.Info("Resource not found. Ignoring since object must be deleted")
+
 			return ctrl.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
-		logger.Error(err, "Failed to get Instance")
+
 		return ctrl.Result{}, err
 	}
 
 	// Checking for the deployment already exists, if not creating a new one
 
 	found := &appsv1.Deployment{}
-	logger.Info("Checkpoint-2")
+
 	err = r.Client.Get(ctx, types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, found)
 	if err != nil && errors.IsNotFound(err) {
 		// Define a new deployment
 		dep := r.deploymentSpec(instance)
-		logger.Info("Creating a new Deployment")
+
 		err = r.Client.Create(ctx, dep)
 		if err != nil {
-			logger.Error(err, "Failed to create new Deployment")
+
 			return ctrl.Result{}, err
 		}
 		// Deployment created successfully - return and requeue
 		return ctrl.Result{Requeue: true}, nil
 	} else if err != nil {
-		logger.Error(err, "Failed to get Deployment")
+
 		return ctrl.Result{}, err
 	}
 
@@ -98,22 +93,22 @@ func (r *SystemReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		found.Spec.Replicas = &size
 		err = r.Client.Update(ctx, found)
 		if err != nil {
-			logger.Error(err, "Failed to update Deployment")
+
 			return ctrl.Result{}, err
 		}
 		// Spec updated - return and requeue
 		return ctrl.Result{Requeue: true}, nil
 	}
-	logger.Info("Recocile loop cheked")
 
 	// Update the Memcached status with the pod ips
 	// List the pods for this deployment
 	podList := &corev1.PodList{}
 	listOpts := []client.ListOption{
 		client.InNamespace(instance.Namespace),
+		client.MatchingLabels(labelsForSystem(instance.Name)),
 	}
-	if err = r.List(ctx, podList, listOpts...); err != nil {
-		logger.Error(err, "Failed to list pods")
+	if err = r.Client.List(ctx, podList, listOpts...); err != nil {
+
 		return ctrl.Result{}, err
 	}
 	podIps := getPodIps(podList.Items)
@@ -124,7 +119,7 @@ func (r *SystemReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		instance.Status.PodIps = podIps
 		err := r.Client.Status().Update(ctx, instance)
 		if err != nil {
-			logger.Error(err, "Failed to update Memcached status")
+
 			return ctrl.Result{}, err
 		}
 	}
@@ -175,6 +170,10 @@ func (r *SystemReconciler) deploymentSpec(instance *internv1alpha1.System) *apps
 	// Set Memcached instance as the owner and controller
 	ctrl.SetControllerReference(instance, dep, r.Scheme)
 	return dep
+}
+
+func labelsForSystem(name string) map[string]string {
+	return map[string]string{"app": "nginx-app"}
 }
 
 func getPodIps(pods []corev1.Pod) []string {
